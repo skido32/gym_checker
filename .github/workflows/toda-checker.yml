@@ -15,7 +15,7 @@ jobs:
       uses: actions/checkout@v4
       
     - name: Dockerをセットアップ
-      uses: docker/setup-buildx-action@v3
+      uses: docker/setup-buildx-action@v4
       
     - name: Docker Composeをインストール
       run: |
@@ -37,7 +37,7 @@ jobs:
       
     - name: 結果をアップロード（失敗時）
       if: failure()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: logs
         path: logs/
