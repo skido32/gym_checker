@@ -1,11 +1,7 @@
-version: '3.8'
-
 services:
   toda-checker:
     build: .
     container_name: toda-facility-checker
-    env_file:
-      - .env
     environment:
       - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
       - PYTHONUNBUFFERED=1
@@ -24,8 +20,6 @@ services:
   toda-scheduler:
     build: .
     container_name: toda-facility-scheduler
-    env_file:
-      - .env
     environment:
       - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
       - PYTHONUNBUFFERED=1
