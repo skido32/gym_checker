@@ -24,24 +24,31 @@
 
 1. Docker Desktopをインストール
 2. リポジトリをクローン
-3. 環境変数を設定（オプション）：
+3. ローカル実行時は環境変数を設定：
 
-### 方法1: .envファイルを使用（推奨）
 ```bash
-# .envファイルを作成
-cp .env.example .env
-
-# .envファイルを編集してSlack Webhook URLを設定
-SLACK_WEBHOOK_URL=your_webhook_url_here
-```
-
-### 方法2: 環境変数を直接設定
-```bash
+# 一時的に環境変数を設定
 export SLACK_WEBHOOK_URL="your_webhook_url_here"
 ```
 
 ## 使用方法
 
+### GitHub Actions（推奨）
+- 自動的に定期実行されます
+- 設定不要で即座に使用可能
+
+### ローカル実行
+
+#### 1. 環境変数の設定
+```bash
+# 一時的に環境変数を設定
+export SLACK_WEBHOOK_URL="your_webhook_url_here"
+
+# または、1行で実行
+SLACK_WEBHOOK_URL="your_webhook_url_here" ./docker-run.sh run
+```
+
+#### 2. 実行
 ```bash
 # 初回セットアップ（イメージビルド）
 ./docker-run.sh build
