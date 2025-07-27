@@ -1,0 +1,54 @@
+{
+  "facility": {
+    "name": "戸田市スポーツセンター",
+    "facility_type": "第１競技場１／８面",
+    "sport": "バドミントン"
+  },
+  "search_settings": {
+    "period": "1週間",
+    "check_times": [
+      "09:00",
+      "11:00",
+      "13:00",
+      "15:00",
+      "17:00",
+      "19:00"
+    ],
+    "preferred_days": [
+      "土",
+      "日",
+      "月",
+      "火",
+      "水",
+      "木",
+      "金"
+    ]
+  },
+  "notification": {
+    "slack_webhook_url": "",
+    "notify_on_available": true,
+    "notify_on_error": false,
+    "min_advance_notice_hours": 24
+  },
+  "schedule": {
+    "check_interval_minutes": 30,
+    "operating_hours": {
+      "start": "09:00",
+      "end": "23:59"
+    },
+    "enabled_days": [
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+      "sunday"
+    ]
+  },
+  "logging": {
+    "level": "INFO",
+    "save_results": true,
+    "max_log_files": 30
+  }
+}

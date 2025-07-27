@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  toda-checker:
+    build: .
+    container_name: toda-facility-checker
+    env_file:
+      - .env
+    environment:
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./logs:/app/logs
+      - ./config.json:/app/config.json:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import playwright; print('Playwright is available')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # 定期実行用のサービス（cron代替）
+  toda-scheduler:
+    build: .
+    container_name: toda-facility-scheduler
+    env_file:
+      - .env
+    environment:
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./logs:/app/logs
+      - ./config.json:/app/config.json:ro
+    command: >
+      sh -c "
+        echo '=== 戸田市施設予約システム スケジューラー開始 ===' &&
+        echo '30分ごとにチェックを実行します' &&
+        while true; do
+          echo \"$$(date): チェックを実行中...\" &&
+          python toda_playwright_checker.py &&
+          echo \"$$(date): チェック完了。30分待機中...\" &&
+          sleep 1800
+        done
+      "
+    restart: unless-stopped
+    depends_on:
+      - toda-checker 

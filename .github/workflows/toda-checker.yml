@@ -1,0 +1,44 @@
+name: 戸田市施設予約システムチェッカー
+
+on:
+  schedule:
+    # 毎日9:00, 11:00, 13:00, 15:00, 17:00, 19:00, 21:00に実行（JST）
+    - cron: '0 0,2,4,6,8,10,12 * * *'  # UTC時間（JST-9時間）
+  workflow_dispatch:  # 手動実行も可能
+
+jobs:
+  check-availability:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: リポジトリをチェックアウト
+      uses: actions/checkout@v4
+      
+    - name: Dockerをセットアップ
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Docker Composeをインストール
+      run: |
+        sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+        sudo chmod +x /usr/local/bin/docker-compose
+        
+    - name: ログディレクトリを作成
+      run: mkdir -p logs
+      
+    - name: Dockerイメージをビルド
+      run: |
+        chmod +x docker-run.sh
+        ./docker-run.sh build
+      
+    - name: 戸田市施設予約システムチェッカーを実行
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      run: ./docker-run.sh run
+      
+    - name: 結果をアップロード（失敗時）
+      if: failure()
+      uses: actions/upload-artifact@v3
+      with:
+        name: logs
+        path: logs/
+        retention-days: 7 
