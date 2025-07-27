@@ -22,8 +22,8 @@ if [ -f ".env" ]; then
     done < .env
 fi
 
-# 環境変数の確認
-if [ -z "$SLACK_WEBHOOK_URL" ]; then
+# 環境変数の確認（ビルド時以外）
+if [ -z "$SLACK_WEBHOOK_URL" ] && [ "${1:-run}" != "build" ]; then
     echo "⚠️  SLACK_WEBHOOK_URLが設定されていません"
     echo "   環境変数で設定するか、.envファイルを作成してください"
     echo "   例: export SLACK_WEBHOOK_URL='your_webhook_url_here'"
@@ -49,7 +49,7 @@ fi
 case "${1:-run}" in
     "build")
         echo "🔨 Dockerイメージをビルド中..."
-        docker-compose build
+        docker-compose build --build-arg SLACK_WEBHOOK_URL="$SLACK_WEBHOOK_URL"
         echo "✅ ビルド完了"
         ;;
     "run")

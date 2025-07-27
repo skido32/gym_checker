@@ -26,6 +26,8 @@ jobs:
       run: mkdir -p logs
       
     - name: Dockerイメージをビルド
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
       run: |
         chmod +x docker-run.sh
         ./docker-run.sh build

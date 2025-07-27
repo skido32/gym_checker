@@ -52,8 +52,12 @@ COPY .env* ./
 # ログディレクトリを作成
 RUN mkdir -p logs
 
+# ビルド時の引数を受け取る
+ARG SLACK_WEBHOOK_URL
+
 # 環境変数を設定
 ENV PYTHONUNBUFFERED=1
+ENV SLACK_WEBHOOK_URL=$SLACK_WEBHOOK_URL
 
 # ヘルスチェック用のコマンド
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
