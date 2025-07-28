@@ -5,6 +5,9 @@ services:
     environment:
       - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
       - PYTHONUNBUFFERED=1
+      - HTTP_PROXY=${HTTP_PROXY:-}
+      - HTTPS_PROXY=${HTTPS_PROXY:-}
+      - NO_PROXY=${NO_PROXY:-}
     volumes:
       - ./logs:/app/logs
       - ./config.json:/app/config.json:ro
@@ -12,6 +15,7 @@ services:
     dns:
       - 8.8.8.8
       - 8.8.4.4
+    network_mode: "host"
     healthcheck:
       test: ["CMD", "python", "-c", "import playwright; print('Playwright is available')"]
       interval: 30s

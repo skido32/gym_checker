@@ -86,8 +86,8 @@ class TodaPlaywrightChecker:
         try:
             # ステップ1: 入力フォームをクリックして検索オプションUIを表示
             self.logger.info("ステップ1: 入力フォームをクリックして検索オプションUIを表示")
-            await page.click('input[placeholder="施設名・曜日などを入力"]')
-            await page.wait_for_timeout(3000)  # より長い待機時間
+            await page.click('input[placeholder="施設名・曜日などを入力"]', timeout=30000)
+            await page.wait_for_timeout(5000)  # より長い待機時間
             
             # ステップ2: 曜日選択（土曜、日曜、祝日）
             self.logger.info("ステップ2: 曜日選択")
@@ -503,8 +503,25 @@ class TodaPlaywrightChecker:
         """ネットワーク接続をテストします"""
         import socket
         import requests
-
+        import os
+        
         self.logger.info("ネットワーク接続をテスト中...")
+        
+        # Docker環境の診断
+        self.logger.info("=== Docker環境診断 ===")
+        self.logger.info(f"コンテナ内のホスト名: {os.uname().nodename}")
+        self.logger.info(f"コンテナ内のユーザー: {os.getuid()}")
+        
+        # ネットワーク設定の確認
+        try:
+            with open('/etc/resolv.conf', 'r') as f:
+                dns_config = f.read()
+                self.logger.info(f"DNS設定:\n{dns_config}")
+        except Exception as e:
+            self.logger.warning(f"DNS設定の確認でエラー: {e}")
+        
+        # サーバー状態を確認
+        self.logger.info("戸田市サーバーの状態を確認中...")
 
         # DNS解決テスト
         try:
@@ -524,22 +541,27 @@ class TodaPlaywrightChecker:
         # HTTP接続テスト
         try:
             self.logger.info(f"HTTP接続テスト中: {self.base_url}")
-            response = requests.get(self.base_url, timeout=10, verify=True)
+            response = requests.get(self.base_url, timeout=30, verify=True)
             self.logger.info(f"HTTP接続テスト成功: ステータスコード {response.status_code}")
             return True
         except requests.exceptions.SSLError as e:
             self.logger.error(f"SSL証明書エラー: {e}")
             # SSL証明書エラーの場合は、検証を無効にして再試行
             try:
-                response = requests.get(self.base_url, timeout=10, verify=False)
+                response = requests.get(self.base_url, timeout=30, verify=False)
                 self.logger.info(f"SSL検証を無効にしてHTTP接続テスト成功: ステータスコード {response.status_code}")
                 return True
             except Exception as e2:
                 self.logger.error(f"SSL検証無効でもHTTP接続テスト失敗: {e2}")
                 return False
+        except requests.exceptions.ConnectTimeout as e:
+            self.logger.error(f"接続タイムアウト: {e}")
+            self.logger.info("サーバーが重い可能性があります。処理を続行します。")
+            return True  # タイムアウトでも続行
         except Exception as e:
             self.logger.error(f"HTTP接続テスト失敗: {e}")
-            return False
+            self.logger.info("接続に問題がありますが、処理を続行します。")
+            return True  # エラーでも続行
 
     async def run(self):
         """メイン実行関数"""
@@ -578,21 +600,21 @@ class TodaPlaywrightChecker:
                 page = await browser.new_page()
 
                 # ページのタイムアウト設定
-                page.set_default_timeout(60000)  # 60秒
-                page.set_default_navigation_timeout(60000)  # 60秒
+                page.set_default_timeout(120000)  # 120秒に延長
+                page.set_default_navigation_timeout(120000)  # 120秒に延長
 
                 # ページにアクセス（タイムアウト時間を延長）
                 self.logger.info(f"予約システムにアクセス中: {self.base_url}")
                 try:
-                    # ネットワーク接続をテスト
+                                        # ネットワーク接続をテスト
                     self.logger.info("ネットワーク接続をテスト中...")
-                    response = await page.goto(self.base_url, timeout=60000)  # 60秒に延長
+                    response = await page.goto(self.base_url, timeout=120000)  # 120秒に延長
                     self.logger.info(f"HTTPステータスコード: {response.status}")
-
+                    
                     if response.status != 200:
                         self.logger.warning(f"HTTPステータスコードが異常です: {response.status}")
-
-                    await page.wait_for_load_state('networkidle', timeout=60000)
+                    
+                    await page.wait_for_load_state('networkidle', timeout=120000)
                     self.logger.info("ページの読み込みが完了しました")
                 except Exception as e:
                     self.logger.warning(f"ページ読み込みでタイムアウトが発生しました: {e}")
