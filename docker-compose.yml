@@ -9,6 +9,9 @@ services:
       - ./logs:/app/logs
       - ./config.json:/app/config.json:ro
     restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     healthcheck:
       test: ["CMD", "python", "-c", "import playwright; print('Playwright is available')"]
       interval: 30s
@@ -26,6 +29,9 @@ services:
     volumes:
       - ./logs:/app/logs
       - ./config.json:/app/config.json:ro
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     command: >
       sh -c "
         echo '=== 戸田市施設予約システム スケジューラー開始 ===' &&

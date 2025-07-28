@@ -499,14 +499,63 @@ class TodaPlaywrightChecker:
         except Exception as e:
             self.logger.error(f"結果の保存でエラーが発生しました: {e}")
 
+    async def test_network_connection(self):
+        """ネットワーク接続をテストします"""
+        import socket
+        import requests
+
+        self.logger.info("ネットワーク接続をテスト中...")
+
+        # DNS解決テスト
+        try:
+            hostname = "yoyaku.city.toda.saitama.jp"
+            ip = socket.gethostbyname(hostname)
+            self.logger.info(f"DNS解決成功: {hostname} -> {ip}")
+
+            # IPアドレスが0.0.0.0の場合は警告
+            if ip == "0.0.0.0":
+                self.logger.warning("⚠️  IPアドレスが0.0.0.0です。DNS設定に問題がある可能性があります。")
+                return False
+
+        except Exception as e:
+            self.logger.error(f"DNS解決失敗: {e}")
+            return False
+
+        # HTTP接続テスト
+        try:
+            self.logger.info(f"HTTP接続テスト中: {self.base_url}")
+            response = requests.get(self.base_url, timeout=10, verify=True)
+            self.logger.info(f"HTTP接続テスト成功: ステータスコード {response.status_code}")
+            return True
+        except requests.exceptions.SSLError as e:
+            self.logger.error(f"SSL証明書エラー: {e}")
+            # SSL証明書エラーの場合は、検証を無効にして再試行
+            try:
+                response = requests.get(self.base_url, timeout=10, verify=False)
+                self.logger.info(f"SSL検証を無効にしてHTTP接続テスト成功: ステータスコード {response.status_code}")
+                return True
+            except Exception as e2:
+                self.logger.error(f"SSL検証無効でもHTTP接続テスト失敗: {e2}")
+                return False
+        except Exception as e:
+            self.logger.error(f"HTTP接続テスト失敗: {e}")
+            return False
+
     async def run(self):
         """メイン実行関数"""
         self.logger.info("=== 戸田市施設予約システム チェッカー開始 ===")
-        
+
+        # ネットワーク接続テスト（オプション）
+        try:
+            if not await self.test_network_connection():
+                self.logger.warning("ネットワーク接続に問題がありますが、処理を続行します。")
+        except Exception as e:
+            self.logger.warning(f"ネットワーク接続テストでエラーが発生しましたが、処理を続行します: {e}")
+
         # 日本時間で現在時刻を取得
         jst_now = datetime.now(timezone(timedelta(hours=9)))
         current_hour = jst_now.hour
-        
+
         # 9:00~23:59以外の場合は処理をスキップ
         if current_hour < 9 or current_hour >= 24:
             self.logger.info(f"現在時刻（JST）: {jst_now.strftime('%Y-%m-%d %H:%M:%S')}")
@@ -514,18 +563,47 @@ class TodaPlaywrightChecker:
             return
         
         self.logger.info(f"現在時刻（JST）: {jst_now.strftime('%Y-%m-%d %H:%M:%S')}")
-        
+
         try:
             async with async_playwright() as p:
-                browser = await p.chromium.launch(headless=True)
+                browser = await p.chromium.launch(
+                    headless=True,
+                    args=[
+                        '--no-sandbox',
+                        '--disable-dev-shm-usage',
+                        '--disable-web-security',
+                        '--disable-features=VizDisplayCompositor'
+                    ]
+                )
                 page = await browser.new_page()
-                
-                # ページにアクセス
+
+                # ページのタイムアウト設定
+                page.set_default_timeout(60000)  # 60秒
+                page.set_default_navigation_timeout(60000)  # 60秒
+
+                # ページにアクセス（タイムアウト時間を延長）
                 self.logger.info(f"予約システムにアクセス中: {self.base_url}")
-                await page.goto(self.base_url)
-                await page.wait_for_load_state('networkidle')
-                self.logger.info("ページの読み込みが完了しました")
-                
+                try:
+                    # ネットワーク接続をテスト
+                    self.logger.info("ネットワーク接続をテスト中...")
+                    response = await page.goto(self.base_url, timeout=60000)  # 60秒に延長
+                    self.logger.info(f"HTTPステータスコード: {response.status}")
+
+                    if response.status != 200:
+                        self.logger.warning(f"HTTPステータスコードが異常です: {response.status}")
+
+                    await page.wait_for_load_state('networkidle', timeout=60000)
+                    self.logger.info("ページの読み込みが完了しました")
+                except Exception as e:
+                    self.logger.warning(f"ページ読み込みでタイムアウトが発生しました: {e}")
+                    self.logger.info("DOMContentLoaded状態で続行を試みます")
+                    try:
+                        await page.wait_for_load_state('domcontentloaded', timeout=30000)
+                        self.logger.info("DOMContentLoaded状態で読み込み完了")
+                    except Exception as e2:
+                        self.logger.error(f"DOMContentLoadedでもタイムアウトが発生しました: {e2}")
+                        raise
+
                 # 検索条件を設定
                 await self.set_search_conditions(page)
                 self.logger.info("検索条件の設定が完了しました")
@@ -539,9 +617,11 @@ class TodaPlaywrightChecker:
                 self.print_results(data)
                 
                 await browser.close()
-                
+
         except Exception as e:
             self.logger.error(f"実行中にエラーが発生しました: {e}")
+            import traceback
+            self.logger.error(f"詳細なエラー情報: {traceback.format_exc()}")
             self.send_slack_error_notification(str(e))
             raise
 
